@@ -113,7 +113,7 @@ jobs:
     permissions:
       contents: read             # 只讀：不能 push / tag / 建 release
     env:
-      VERSION: ${{ needs.build.outputs.version }}
+      VERSION: ${{ vars.BUILD_TAG }}.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -135,12 +135,9 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install Copilot CLI
-        run: npm install -g @github/copilot
-
-      - name: Ask the AI agent to draft release notes
+      - name: Ask the AI agent (Gemini) to draft release notes
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_TOKEN }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           {
             echo "You write concise release notes in Markdown for version $VERSION."
@@ -153,12 +150,18 @@ jobs:
             echo "COMMITS>>>"
           } > prompt.txt
 
-          if [ -n "$COPILOT_GITHUB_TOKEN" ] \
-            && timeout 180 copilot -p "$(cat prompt.txt)" -s --no-ask-user > notes.md 2> agent.err \
+          if [ -n "$GEMINI_API_KEY" ] \
+            && jq -Rs '{contents:[{parts:[{text:.}]}]}' prompt.txt > body.json \
+            && timeout 180 curl -sS -X POST \
+                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" \
+                 -H "x-goog-api-key: $GEMINI_API_KEY" \
+                 -H "Content-Type: application/json" \
+                 -d @body.json > resp.json 2> agent.err \
+            && jq -e -r '.candidates[0].content.parts[0].text' resp.json > notes.md \
             && [ -s notes.md ]; then
             echo "status=ai" >> "$GITHUB_ENV"
           else
-            echo "::warning::AI agent failed: $(head -c 300 agent.err 2>/dev/null | tr '\n' ' ')"
+            echo "::warning::AI agent failed: $(head -c 300 agent.err resp.json 2>/dev/null | tr '\n' ' ')"
             { echo "_AI draft unavailable — raw commit list:_"; echo; cat commits_trim.txt; } > notes.md
             echo "status=fallback" >> "$GITHUB_ENV"
           fi
