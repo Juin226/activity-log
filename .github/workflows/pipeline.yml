@@ -16,10 +16,17 @@ jobs:
   # Job 1: Build the software
   build:
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # 需要完整歷史才能讀 git tag
+
+      - name: Determine version
+        id: version
+        run: echo "version=$(git describe --tags --always)-build.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -61,7 +68,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ vars.BUILD_TAG }}
+          TAG: ${{ vars.BUILD_TAG }}-${{ needs.build.outputs.version }}
           NOTE: ${{ vars.RELEASE_NOTE }}
         run: |
           gh release create "$TAG" build.zip \
@@ -70,7 +77,7 @@ jobs:
             
   # Job 3: Deploy to staging
   deploy-staging:
-    needs: deploy-dev
+    needs: [deploy-dev, build]
     runs-on: ubuntu-latest
     environment: staging
     permissions:
@@ -86,7 +93,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ vars.BUILD_TAG }}
+          TAG: ${{ vars.BUILD_TAG }}-${{ needs.build.outputs.version }}
           NOTE: ${{ vars.RELEASE_NOTE }}
         run: |
           gh release create "$TAG" build.zip \
@@ -95,7 +102,7 @@ jobs:
 
   # Job 4: Deploy to production
   deploy-production:
-    needs: deploy-staging
+    needs: [deploy-staging, build]
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -111,7 +118,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          TAG: ${{ vars.BUILD_TAG }}
+          TAG: ${{ vars.BUILD_TAG }}-${{ needs.build.outputs.version }}
           NOTE: ${{ vars.RELEASE_NOTE }}
         run: |
           gh release create "$TAG" build.zip \
