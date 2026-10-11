@@ -109,7 +109,7 @@ jobs:
   release-notes:
     needs: [build, deploy-staging]
     runs-on: ubuntu-latest
-    environment: ai-agent        # COPILOT_TOKEN 只存在這個 environment
+    environment: ai-agent        # GEMINI_TOKEN 只存在這個 environment
     permissions:
       contents: read             # 只讀：不能 push / tag / 建 release
     env:
