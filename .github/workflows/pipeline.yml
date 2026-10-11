@@ -1,5 +1,5 @@
 # .github/workflows/pipeline.yml
-# A4: Deployment Pipeline: build → dev → staging → production (human gate)
+# A4: Deployment Pipeline: build → dev → staging → production
 
 name: CI/CD Deployment Pipeline
 
@@ -70,7 +70,7 @@ jobs:
             
   # Job 3: Deploy to staging
   deploy-staging:
-    needs: build
+    needs: deploy-dev
     runs-on: ubuntu-latest
     environment: staging
     permissions:
