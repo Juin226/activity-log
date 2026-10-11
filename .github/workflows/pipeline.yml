@@ -1,0 +1,69 @@
+# .github/workflows/pipeline.yml
+# A4: Deployment Pipeline: build → dev
+
+name: CI/CD Deployment Pipeline
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch: 
+
+permissions:
+  contents: read
+
+jobs:
+  # Job 1: Build the software
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Package build files
+        run: |
+          zip -r build.zip \
+            dist action.yml package.json README.md LICENSE
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifact
+          path: build.zip
+
+  # Job 2: Deploy to dev environment
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment: dev
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+
+      - name: Create Dev Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ vars.BUILD_TAG }}
+          NOTE: ${{ vars.RELEASE_NOTE }}
+        run: |
+          gh release create "$TAG" build.zip \
+            --title "$TAG" \
+            --notes "$NOTE"
