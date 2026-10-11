@@ -153,7 +153,7 @@ jobs:
           if [ -n "$GEMINI_API_KEY" ] \
             && jq -Rs '{contents:[{parts:[{text:.}]}]}' prompt.txt > body.json \
             && timeout 180 curl -sS -X POST \
-                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent" \
+                 "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent" \
                  -H "x-goog-api-key: $GEMINI_API_KEY" \
                  -H "Content-Type: application/json" \
                  -d @body.json > resp.json 2> agent.err \
