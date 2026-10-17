@@ -275,17 +275,24 @@ jobs:
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          gh issue create --title "❌ Tests failed in run #${{ github.run_number }}" \
-            --body "Pipeline stopped, **no deployment made**. Run: $RUN_URL  Commit: ${{ github.sha }}"
-
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          BODY="❌ Tests failed in run #${{ github.run_number }} (commit ${{ github.sha }})
+          Logs: $RUN_URL"
+          NUM=$(gh issue list --state open --search "Tests failed in:title" --json number -q '.[0].number')
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "$BODY"
+          else
+            gh issue create --title "❌ Tests failed in run #${{ github.run_number }}" --body "$BODY"
+          fi
+          
   report-test-results:
     needs: [test-unit, test-integration]
     if: success()
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -304,3 +311,11 @@ jobs:
           | Line coverage | $COV% (threshold 80%) |"
           echo "$BODY" >> "$GITHUB_STEP_SUMMARY"
           gh api "repos/$GH_REPO/commits/${{ github.sha }}/comments" -f body="$BODY"
+          
+          NUM=$(gh issue list --state open --search "Tests failed in:title" --json number -q '.[0].number')
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body "$BODY
+
+          ✅ Tests are passing again — closing this issue."
+            gh issue close "$NUM"
+          fi
