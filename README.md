@@ -1,4 +1,18 @@
-![CI/CD Pipeline](https://github.com/Juin226/activity-log/actions/workflows/pipeline.yml/badge.svg?branch=master)
+<p align="center">
+  <a href="https://github.com/Juin226/activity-log/actions/workflows/pipeline.yml">
+    <img src="https://github.com/Juin226/activity-log/actions/workflows/pipeline.yml/badge.svg?branch=master&event=push" alt="CI/CD Pipeline">
+  </a>
+  <a href="https://github.com/Juin226/activity-log/actions/workflows/dist-build-check.yml">
+    <img src="https://github.com/Juin226/activity-log/actions/workflows/dist-build-check.yml/badge.svg?branch=master" alt="Build">
+  </a>
+  <a href="https://github.com/Juin226/activity-log/actions/workflows/pipeline.yml">
+    <img src="https://img.shields.io/badge/tests-passing-brightgreen" alt="Tests">
+  </a>
+  <a href="https://github.com/Juin226/activity-log/releases">
+    <img src="https://img.shields.io/github/v/release/Juin226/activity-log?include_prereleases&sort=date" alt="Release">
+  </a>
+</p>
+
 <h1 align="center" id="title">Activity Log</h1>
 
 ![activity log](https://socialify.git.ci/TheDanniCraft/activity-log/image?forks=1&issues=1&language=1&logo=https%3A%2F%2Favatars.githubusercontent.com%2Fu%2F66677362&name=1&owner=1&pattern=Solid&pulls=1&stargazers=1&theme=Auto)
