@@ -8,6 +8,12 @@ on:
     branches:
       - master
   workflow_dispatch: 
+    # 截失敗圖用
+    inputs:
+      simulate_failure:
+        description: "Force tests to fail (for demo)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -53,9 +59,29 @@ jobs:
           name: build-artifact
           path: build.zip
 
+  # Job 2: Automated tests
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    env:
+      SIMULATE_FAIL: ${{ inputs.simulate_failure }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+      - run: unzip -o build.zip
+      - name: Run Automated Tests
+        run: |
+          echo "Running automated tests..."
+          npm test || (echo "❌ Tests failed" && exit 1)
+          npm run test:integration
+
   # Job 2: Deploy to dev environment
   deploy-dev:
-    needs: build
+    needs: [build, test]
     runs-on: ubuntu-latest
 
     environment: dev
