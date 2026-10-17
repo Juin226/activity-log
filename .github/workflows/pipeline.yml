@@ -263,3 +263,44 @@ jobs:
           gh release create "$TAG" build.zip \
             --title "$TAG" \
             --notes "$NOTE"
+
+  #測試失敗時自動開 Issue
+  notify-test-failure:
+    needs: [test-unit, test-integration]
+    if: failure()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create --title "❌ Tests failed in run #${{ github.run_number }}" \
+            --body "Pipeline stopped, **no deployment made**. Run: $RUN_URL  Commit: ${{ github.sha }}"
+
+  report-test-results:
+    needs: [test-unit, test-integration]
+    if: success()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: test-reports-node24
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          COV=$(awk -F: '/^LF:/{lf+=$2} /^LH:/{lh+=$2} END{printf "%.2f", lh*100/lf}' lcov.info)
+          TESTS=$(grep -c '<testcase' junit.xml)
+          BODY="## ✅ Test Results (run #${{ github.run_number }})
+          | Item | Result |
+          |---|---|
+          | Unit tests | $TESTS passed (Node 22, 24) |
+          | Integration | staging, prod passed |
+          | Line coverage | $COV% (threshold 80%) |"
+          echo "$BODY" >> "$GITHUB_STEP_SUMMARY"
+          gh api "repos/$GH_REPO/commits/${{ github.sha }}/comments" -f body="$BODY"
