@@ -63,18 +63,33 @@ jobs:
   test-unit:
     needs: build
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
     env:
       TEST_ENV: staging
       SIMULATE_FAIL: ${{ inputs.simulate_failure }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
       - uses: oven-sh/setup-bun@v2
       - run: bun install
-      - name: Run unit tests
+      - name: Unit tests + coverage
         run: |
-          echo "Unit tests (TEST_ENV=$TEST_ENV)"
+          echo "Node $(node -v), TEST_ENV=$TEST_ENV"
           node test/mock.test.js
-          npm run test:unit
+          npm run test:coverage
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports-node${{ matrix.node }}
+          path: |
+            junit.xml
+            lcov.info
 
   test-integration:
     needs: test-unit
